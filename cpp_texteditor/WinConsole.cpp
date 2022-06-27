@@ -109,3 +109,61 @@ WinConsole::~WinConsole( ) {
 	SetConsoleMode( this->hStdout, this->savedOutMode );
 
 };
+
+KeyEvent WinConsole::doReadKey( ) {
+
+	DWORD read;
+	if( !ReadConsoleInput(
+		this->hStdin,
+		this->irInBuf,
+		1,
+		&read
+	) )
+		throw std::system_error(
+			std::error_code(
+				GetLastError( ),
+				std::system_category( )
+			), "Failed to read from console" );
+
+	WORD vKeycode;
+	switch( irInBuf[ 0 ].EventType ) {
+	case KEY_EVENT:
+		if( irInBuf[ 0 ].Event.KeyEvent.bKeyDown ) {
+			vKeycode = irInBuf[ 0 ].Event.KeyEvent.wVirtualKeyCode;
+			// For now, only return ascii chars
+			if( ( vKeycode >= 0x30 && vKeycode <= 0x39 ) || ( vKeycode >= 0x41 && vKeycode <= 0x5A ) )
+				return KeyEvent( ( char ) vKeycode );
+
+			// TODO: This should check the virtual code for a known control character
+			//   If not, then check if it is an allowed ascii char
+			//   If not, we don't recognize it
+		}
+		break;
+
+	case WINDOW_BUFFER_SIZE_EVENT:
+		// TODO: Handle buffer resize
+		break;
+
+	default:
+		// TODO: Should we enumerate all the options?
+		// Meh...
+		break;
+	}
+
+	return KeyEvent( ControlKeyEvent::CK_ERROR );
+
+};
+
+bool WinConsole::doKeysReady( ) {
+
+	DWORD num;
+	if( !GetNumberOfConsoleInputEvents( this->hStdin, &num ) )
+		throw std::system_error(
+			std::error_code(
+				GetLastError( ),
+				std::system_category( )
+			), "Failed to get count of input events!" );
+
+	return num > 0;
+
+};

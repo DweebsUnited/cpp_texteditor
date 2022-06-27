@@ -31,4 +31,11 @@ public:
 
 	};
 
+	size_t size( ) {
+
+		std::unique_lock lock( queue_mtx );
+		return queue.size( );
+
+	};
+
 };

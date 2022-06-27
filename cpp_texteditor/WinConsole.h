@@ -37,45 +37,8 @@ class WinConsole : public Screen, public Keyboard {
 
 	};
 
-	char doReadKey( ) {
-
-		DWORD read;
-		if( !ReadConsoleInput(
-			this->hStdin,
-			this->irInBuf,
-			1,
-			&read
-		) )
-			throw std::runtime_error( "Failed to read from console" );
-
-		WORD vKeycode;
-		switch( irInBuf[ 0 ].EventType ) {
-			case KEY_EVENT:
-				if( irInBuf[ 0 ].Event.KeyEvent.bKeyDown ) {
-					vKeycode = irInBuf[ 0 ].Event.KeyEvent.wVirtualKeyCode;
-					// For now, only return ascii chars
-					if( ( vKeycode >= 0x30 && vKeycode <= 0x39 ) || ( vKeycode >= 0x41 && vKeycode <= 0x5A ) )
-						return vKeycode;
-
-					// TODO: This should check the virtual code for a known control character
-					//   If not, then check if it is an allowed ascii char
-					//   If not, we don't recognize it
-				}
-				break;
-
-			case WINDOW_BUFFER_SIZE_EVENT:
-				// TODO: Handle buffer resize
-				break;
-
-			default:
-				// TODO: Should we enumerate all the options?
-				// Meh...
-				break;
-		}
-
-		return 0;
-
-	};
+	KeyEvent doReadKey( );
+	bool doKeysReady( );
 
 public:
 	// Get the console handle, save the current settings
