@@ -4,6 +4,10 @@
 #include <memory>
 #include <mutex>
 
+
+// Very simple thread-safe queue
+// Basically just wrap push/pop with a mutex and unique_locks
+
 template <typename M>
 class Channel {
 
@@ -14,17 +18,17 @@ public:
 	void push( M && msg ) {
 
 		std::unique_lock<std::mutex> lock( queue_mtx );
-		queue.push( std::make_unique( std::move( msg ) ) );
+		queue.push( std::move( std::make_unique<M>( std::move( msg ) ) ) );
 
 	};
 
 	std::unique_ptr<M> pop( ) {
 
-		std::unique_lock lock( queue_mtx );
+		std::unique_lock<std::mutex> lock( queue_mtx );
 		if( queue.empty( ) )
 			return nullptr;
 
-		std::unique_ptr<M> last = queue.front( );
+		std::unique_ptr<M> last = std::move( queue.front( ) );
 		queue.pop( );
 
 		return last;
@@ -33,7 +37,7 @@ public:
 
 	size_t size( ) {
 
-		std::unique_lock lock( queue_mtx );
+		std::unique_lock<std::mutex> lock( queue_mtx );
 		return queue.size( );
 
 	};

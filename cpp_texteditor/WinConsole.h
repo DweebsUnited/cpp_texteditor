@@ -6,37 +6,29 @@
 #include "Windows.h"
 #include <stdexcept>
 
+#define IRINBUF_SIZE 16
 
-// This is an RAII wrapper around the windows console, that handles input and output
+// This is an RAII wrapper around the windows Console, that handles input and output
+// Since the console is both I and O, we inherit from Screen and Keyboard, and share access to the Console
 class WinConsole : public Screen, public Keyboard {
 
-	// StdIn, StdOut, and the screen buffer
+	// StdIn, StdOut streams
 	HANDLE hStdin;
 	HANDLE hStdout;
 
-	// Saved console modes
+	// Saved console modes, we reset on destruction
 	DWORD savedOutMode;
 	DWORD savedInMode;
 
-	// Buffer for input events
-	INPUT_RECORD irInBuf[ 16 ];
+	// Screen operations!
 
 	// Clear the screen, reset cursor
-	bool doInit( ) {
+	bool doInit( );
 
-		DWORD written;
-		if( !WriteConsole(
-			this->hStdout,
-			L"\x1B[2J",
-			4,
-			&written,
-			NULL ) )
-			return false;
-		
-		return written == 4;
 
-	};
-
+	// Keyboard operations!
+	
+	// Read some keys, interpreting some platform specific ones to ControlKeyEvents
 	KeyEvent doReadKey( );
 	bool doKeysReady( );
 
