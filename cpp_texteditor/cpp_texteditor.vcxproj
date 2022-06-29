@@ -134,7 +134,11 @@
   <ItemGroup>
     <ClInclude Include="Channel.h" />
     <ClInclude Include="Editor.h" />
+    <ClInclude Include="Emacs.h" />
+    <ClInclude Include="GapBuffer.h" />
     <ClInclude Include="Keyboard.h" />
+    <ClInclude Include="LineEditor.h" />
+    <ClInclude Include="VIM.h" />
     <ClInclude Include="WinConsole.h" />
     <ClInclude Include="Screen.h" />
   </ItemGroup>

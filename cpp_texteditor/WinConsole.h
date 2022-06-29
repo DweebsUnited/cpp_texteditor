@@ -11,7 +11,8 @@
 
 // This is an RAII wrapper around the windows Console, that handles input and output
 // Since the console is both I and O, we inherit from Screen and Keyboard, and share access to the Console
-class WinConsole : public Screen, public Keyboard, public Editor {
+// We will have separate classes for Editors, do not combine it here
+class WinConsole : public Screen, public Keyboard {
 
 	// StdIn, StdOut streams
 	HANDLE hStdin;
@@ -23,8 +24,11 @@ class WinConsole : public Screen, public Keyboard, public Editor {
 
 	// Screen operations!
 
-	// Clear the screen, reset cursor
+	// All init done in the constructor
 	bool doInit( );
+
+	// Clear the screen, reset cursor
+	bool doClear( );
 
 	bool doSetSize( size_t cols, size_t rows );
 

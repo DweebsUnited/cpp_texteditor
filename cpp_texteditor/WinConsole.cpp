@@ -130,19 +130,27 @@ WinConsole::~WinConsole( ) {
 
 bool WinConsole::doInit( ) {
 
+	// All init done in the constructor
+	return true;
+
+};
+
+bool WinConsole::doClear( ) {
+
 	// Clear the screen, reset cursor to 0,0
 	DWORD written;
 	if( !WriteConsole(
 		this->hStdout,
-		L"\x1B[2J",
-		4,
+		L"\x1B[2J\x1B[0;0H",
+		10,
 		&written,
 		NULL ) )
 		return false;
 
-	return written == 4;
+	return written == 10;
 
-};
+}
+
 
 bool WinConsole::doSetSize( size_t cols, size_t rows ) {
 
