@@ -5,6 +5,8 @@
 
 #include <mutex>
 #include <iostream>
+#include <format>
+#include <string>
 
 void printError( std::system_error & e, const char * msg ) {
 	std::cerr << "Received a system error!" << std::endl;
@@ -64,8 +66,8 @@ void input_worker( std::shared_ptr<Keyboard> kb, std::shared_ptr<Channel<KeyEven
 			}
 
 			// If KeyEvent is a Ctrl-Q, emit quit and tell global state to stop
-			if( c.printable ) {
-				if( ( c.ascii == 'Q' || c.ascii == 'q' ) && c.shft == false && c.ctrl == true && c.alt == false ) {
+			if( c.type == KeyEventType::KET_PRINT ) {
+				if( c.ascii == 'q' && c.shft == false && c.ctrl == true && c.alt == false ) {
 					// Quit!
 					state->stop( );
 					return;
@@ -98,8 +100,15 @@ void screen_worker( std::shared_ptr<Screen> screen, std::shared_ptr<Channel<KeyE
 		while( ch->size( ) > 0 ) {
 
 			std::unique_ptr<KeyEvent> c = ch->pop( );
-			if( c->printable )
-				std::cerr << c->ascii;
+			if( c->type == KeyEventType::KET_PRINT ) {
+				std::string displaystring = std::format(
+					"{}{}{}",
+					c->ctrl ? 'C' : ' ',
+					c->alt ? 'A' : ' ',
+					c->ascii
+				);
+				screen->putString( displaystring, 0, 0 );
+			}
 
 		}
 

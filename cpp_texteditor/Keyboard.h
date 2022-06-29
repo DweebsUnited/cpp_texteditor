@@ -1,10 +1,10 @@
 #pragma once
 
 // Control key events are specially handled
-// We don't care about the values, but we do want them to be the same size for the union with printable ascii chars
-enum class ControlKeyEvent : char {
+// We don't really care about the values, but ERROR should be 0
+enum class ControlKeyEvent {
 	// Error -- Key not recognized, or other, we don't care
-	CK_ERROR = 0x00,
+	CK_ERROR = 0,
 
 	// Other keys
 	CK_ESC,
@@ -50,6 +50,10 @@ enum class ControlKeyEvent : char {
 	CK_M_SKIP,
 	CK_M_VOLU,
 	CK_M_VOLD,
+	CK_M_MUTE,
+
+	// Same for Browser keys
+	// TODO
 
 	// Add a couple OEM for keyboard-specific functions
 	// GKOS for example needs symbol, one shot, 
@@ -64,28 +68,46 @@ enum class ControlKeyEvent : char {
 };
 
 // This is a single key event within our program
-// This can be a printable ascii character, or a control key
+// This can be one of several types of key event
+enum class KeyEventType {
+	KET_PRINT,
+	KET_CONTROL,
+	KET_RESIZE, // We need to be able to pass resizes through when they come from WinConsole for example
+};
+
 struct KeyEvent {
 
-	bool printable;
-
-	// Printables can have modifiers applied
-	bool shft;
-	bool ctrl;
-	bool alt;
-	bool os;
+	KeyEventType type;
 	
 	union {
-		char ascii;
+		struct {
+			char ascii;
+
+			bool shft;
+			bool ctrl;
+			bool alt;
+			bool os;
+		};
+
 		ControlKeyEvent ck;
+		
+		struct {
+			size_t cols;
+			size_t rows;
+		};
 	};
 
 	// Default constructor is an error
-	KeyEvent( ) : printable( false ), ck( ControlKeyEvent::CK_ERROR ), shft( false ), ctrl( false ), alt( false ), os( false ) { };
+	KeyEvent( ) : type( KeyEventType::KET_CONTROL ), ck( ControlKeyEvent::CK_ERROR ) { };
 
-	// Constructor for printables and control keys
-	KeyEvent( char c, bool shft = false, bool ctrl = false, bool alt = false, bool os = false ) : printable( true ), ascii( c ), shft( shft ), ctrl( ctrl ), alt( alt ), os( os ) { };
-	KeyEvent( ControlKeyEvent ck ) : printable( false ), ck( ck ), shft( false ), ctrl( false ), alt( false ), os( false ) { };
+	// Constructors
+	// Printable
+	KeyEvent( char c, bool shft = false, bool ctrl = false, bool alt = false, bool os = false ) :
+		type( KeyEventType::KET_PRINT ), ascii( c ), shft( shft ), ctrl( ctrl ), alt( alt ), os( os ) { };
+	// Control
+	KeyEvent( ControlKeyEvent ck ) : type( KeyEventType::KET_CONTROL ), ck( ck ) { };
+	// Resize
+	KeyEvent( size_t cols, size_t rows ) : type( KeyEventType::KET_RESIZE ), cols( cols ), rows( rows ) { };
 
 };
 

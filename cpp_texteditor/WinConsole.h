@@ -2,6 +2,7 @@
 
 #include "Screen.h"
 #include "Keyboard.h"
+#include "Editor.h"
 
 #include "Windows.h"
 #include <stdexcept>
@@ -10,7 +11,7 @@
 
 // This is an RAII wrapper around the windows Console, that handles input and output
 // Since the console is both I and O, we inherit from Screen and Keyboard, and share access to the Console
-class WinConsole : public Screen, public Keyboard {
+class WinConsole : public Screen, public Keyboard, public Editor {
 
 	// StdIn, StdOut streams
 	HANDLE hStdin;
@@ -24,6 +25,10 @@ class WinConsole : public Screen, public Keyboard {
 
 	// Clear the screen, reset cursor
 	bool doInit( );
+
+	bool doSetSize( size_t cols, size_t rows );
+
+	size_t doPutString( std::string & str, size_t x, size_t y );
 
 
 	// Keyboard operations!
