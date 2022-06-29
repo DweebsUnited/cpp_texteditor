@@ -11,7 +11,7 @@ protected:
 	size_t currx = 0, curry = 0;
 
 	// Consume a KeyEvent -- Possibly emit a series of ScreenCommands
-	//virtual std::vector<ScreenCommand> doConsumeKey( KeyEvent & key ) = 0;
+	virtual std::vector<ScreenCommand> doConsumeKey( KeyEvent & key ) = 0;
 
 public:
 	// Get current cursor position
@@ -22,6 +22,6 @@ public:
 	//   Or limit the throughput of the channel based on amount of data being sent?
 	//     That would limit overall memory usage, and the editor would just block until the screen catches up
 	//     Could be done directly in the Channel, but means this class would need to learn about Channels..
-	//std::vector<ScreenCommand> consumeKey( KeyEvent & key ) { return this->doConsumeKey( key ); };
+	std::vector<ScreenCommand> consumeKey( KeyEvent & key ) { return this->doConsumeKey( key ); };
 
 };

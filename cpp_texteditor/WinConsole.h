@@ -5,9 +5,6 @@
 #include "Editor.h"
 
 #include "Windows.h"
-#include <stdexcept>
-
-#define IRINBUF_SIZE 16
 
 // This is an RAII wrapper around the windows Console, that handles input and output
 // Since the console is both I and O, we inherit from Screen and Keyboard, and share access to the Console
