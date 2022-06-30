@@ -66,7 +66,7 @@ public:
 
 	// Consume a screen command -- Call public funcs as needed
 	// Define this in the base, not the derived
-	/*bool consumeCommand( ScreenCommand & sc ) {
+	bool consumeCommand( ScreenCommand & sc ) {
 		switch( sc.type ) {
 		case ScreenCommandType::SC_RESIZE:
 			return this->setSize( sc.size.cols, sc.size.rows );
@@ -75,7 +75,7 @@ public:
 		case ScreenCommandType::SC_PUTSTRING:
 			return this->putString( sc.message.msg, sc.message.x, sc.message.y ) == sc.message.msg.length( );
 		}
-	};*/
+	};
 
 	bool clear( ) { return this->doClear( ); }
 
