@@ -4,22 +4,6 @@
 #include <string>
 #include <format>
 
-// Courtesy of stackoverflow: https://stackoverflow.com/a/69410299
-std::wstring string_to_wide_string( const std::string & string ) {
-	if( string.empty( ) ) {
-		return L"";
-	}
-
-	const auto size_needed = MultiByteToWideChar( CP_UTF8, 0, &string.at( 0 ), ( int ) string.size( ), nullptr, 0 );
-	if( size_needed <= 0 ) {
-		throw std::runtime_error( "MultiByteToWideChar() failed: " + std::to_string( size_needed ) );
-	}
-
-	std::wstring result( size_needed, 0 );
-	MultiByteToWideChar( CP_UTF8, 0, &string.at( 0 ), ( int ) string.size( ), &result.at( 0 ), size_needed );
-	return result;
-}
-
 WinConsole::WinConsole( ) {
 
 	// Get the standard input handle. 
@@ -69,7 +53,7 @@ WinConsole::WinConsole( ) {
 
 	// Enable virtual terminal processing on stdout, no newlines on writes
 	// Weird, you have to enable processed output to get virtual terminal processing...
-	DWORD reqOutMode = ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING | DISABLE_NEWLINE_AUTO_RETURN;
+	DWORD reqOutMode = ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING;
 	if( !SetConsoleMode( this->hStdout, reqOutMode ) )
 		throw std::system_error(
 			std::error_code(
@@ -147,6 +131,9 @@ bool WinConsole::doClear( ) {
 		NULL ) )
 		return false;
 
+	this->curx = 0;
+	this->cury = 0;
+
 	return written == 10;
 
 }
@@ -154,35 +141,44 @@ bool WinConsole::doClear( ) {
 
 bool WinConsole::doSetSize( size_t cols, size_t rows ) {
 
-	// No need to do anything special for this class -- tracked size already updated by base class
-	return true;
+	// We cannot force a resize of the console buffer, fail
+	throw std::runtime_error( "Not implementable for this console interface!" );
 
 };
 
-size_t WinConsole::doPutString( std::string & str, size_t x, size_t y ) {
+size_t WinConsole::doPutString( std::string & str, size_t x, size_t y, bool insert ) {
 
-	// Write cursor position, write to end of line or string
-	std::string movecmd = std::format( "\x1B[{};{}H", y, x );
-	
-	DWORD written = 0;
-	if( !WriteConsoleA(
-		this->hStdout,
-		movecmd.c_str( ),
-		movecmd.length( ),
-		&written,
-		NULL ) )
-			
-		return 0;
-
-	written = 0;
+	// Don't rely on wrapping behaviour
+	// Write to end of string or line
 	int lenToWrite = min( str.length( ), this->cols - x );
-	// If this fails here, should we care? Might cause an infinite loop returning 0...
+	DWORD written = 0;
+
+	// Write cursor position
+	if( x != this->curx || y != this->cury ) {
+
+		std::string movecmd = std::format( "\x1B[{};{}H", y, x );
+
+		if( !WriteConsoleA(
+			this->hStdout,
+			movecmd.c_str( ),
+			movecmd.length( ),
+			&written,
+			NULL ) || written != movecmd.length( ) )
+
+			return 0;
+
+	}
+
+	// Now write chars back out
+	// If this fails here, should we care? Might cause caller to infinite loop returning 0...
 	WriteConsoleA(
 		this->hStdout,
 		str.c_str( ),
 		lenToWrite,
 		&written,
 		NULL );
+
+	this->curx += written;
 	
 	return written;
 
@@ -219,35 +215,35 @@ KeyEvent WinConsole::doReadKey( ) {
 			// TODO: Optimize
 			switch( vKeycode ) {
 			case VK_BACK:
-				return KeyEvent( ControlKeyEvent::CK_BKSPC );
+				return KeyEvent( KeyEventControl::CK_BKSPC );
 			case VK_TAB:
 				return KeyEvent( '\t' );
 			case VK_RETURN:
 				return KeyEvent( '\n' );
 			case VK_ESCAPE:
-				return KeyEvent( ControlKeyEvent::CK_ESC );
+				return KeyEvent( KeyEventControl::CK_ESC );
 			case VK_SPACE:
 				return KeyEvent( ' ' );
 			case VK_PRIOR:
-				return KeyEvent( ControlKeyEvent::CK_PGUP );
+				return KeyEvent( KeyEventControl::CK_PGUP );
 			case VK_NEXT:
-				return KeyEvent( ControlKeyEvent::CK_PGDN );
+				return KeyEvent( KeyEventControl::CK_PGDN );
 			case VK_END:
-				return KeyEvent( ControlKeyEvent::CK_END );
+				return KeyEvent( KeyEventControl::CK_END );
 			case VK_HOME:
-				return KeyEvent( ControlKeyEvent::CK_HOME );
+				return KeyEvent( KeyEventControl::CK_HOME );
 			case VK_LEFT:
-				return KeyEvent( ControlKeyEvent::CK_LEFT );
+				return KeyEvent( KeyEventControl::CK_LEFT );
 			case VK_UP:
-				return KeyEvent( ControlKeyEvent::CK_UP );
+				return KeyEvent( KeyEventControl::CK_UP );
 			case VK_RIGHT:
-				return KeyEvent( ControlKeyEvent::CK_RIGHT );
+				return KeyEvent( KeyEventControl::CK_RIGHT );
 			case VK_DOWN:
-				return KeyEvent( ControlKeyEvent::CK_DOWN );
+				return KeyEvent( KeyEventControl::CK_DOWN );
 			case VK_INSERT:
-				return KeyEvent( ControlKeyEvent::CK_INSERT );
+				return KeyEvent( KeyEventControl::CK_INSERT );
 			case VK_DELETE:
-				return KeyEvent( ControlKeyEvent::CK_DEL );
+				return KeyEvent( KeyEventControl::CK_DEL );
 
 			// Printables! Output correctly cased, with the appropriate control keys
 			case 0x30:
@@ -374,10 +370,10 @@ KeyEvent WinConsole::doReadKey( ) {
 			case VK_F10:
 			case VK_F11:
 			case VK_F12:
-				return KeyEvent( (ControlKeyEvent)( (int)ControlKeyEvent::CK_F_1 + ( vKeycode - VK_F1 ) ) );
+				return KeyEvent( (KeyEventControl)( (int)KeyEventControl::CK_F_1 + ( vKeycode - VK_F1 ) ) );
 
 			case VK_NUMLOCK:
-				return KeyEvent( ControlKeyEvent::CK_NUMLK );
+				return KeyEvent( KeyEventControl::CK_NUMLK );
 
 			default:
 				return KeyEvent( );

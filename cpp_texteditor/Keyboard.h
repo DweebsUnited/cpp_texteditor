@@ -1,8 +1,30 @@
 #pragma once
 
+#include <variant>
+
+// This is a single key event within our program
+// This can be one of several types of key event
+enum class KeyEventType {
+	KET_PRINT,
+	KET_CONTROL,
+	KET_RESIZE, // We need to be able to pass resizes through when they come from WinConsole for example
+};
+
+struct KeyEventPrintable {
+	char ascii;
+
+	bool shft;
+	bool ctrl;
+	bool alt;
+	bool os;
+};
+struct KeyEventResize {
+	size_t cols;
+	size_t rows;
+};
 // Control key events are specially handled
 // We don't really care about the values, but ERROR should be 0
-enum class ControlKeyEvent {
+enum class KeyEventControl {
 	// Error -- Key not recognized, or other, we don't care
 	CK_ERROR = 0,
 
@@ -67,47 +89,23 @@ enum class ControlKeyEvent {
 	CK_OEM8,
 };
 
-// This is a single key event within our program
-// This can be one of several types of key event
-enum class KeyEventType {
-	KET_PRINT,
-	KET_CONTROL,
-	KET_RESIZE, // We need to be able to pass resizes through when they come from WinConsole for example
-};
-
 struct KeyEvent {
 
 	KeyEventType type;
-	
-	union {
-		struct {
-			char ascii;
 
-			bool shft;
-			bool ctrl;
-			bool alt;
-			bool os;
-		};
-
-		ControlKeyEvent ck;
-		
-		struct {
-			size_t cols;
-			size_t rows;
-		};
-	};
+	std::variant<KeyEventPrintable, KeyEventControl, KeyEventResize> event;
 
 	// Default constructor is an error
-	KeyEvent( ) : type( KeyEventType::KET_CONTROL ), ck( ControlKeyEvent::CK_ERROR ) { };
+	KeyEvent( ) : type( KeyEventType::KET_CONTROL ), event( KeyEventControl::CK_ERROR ) { };
 
 	// Constructors
 	// Printable
 	KeyEvent( char c, bool shft = false, bool ctrl = false, bool alt = false, bool os = false ) :
-		type( KeyEventType::KET_PRINT ), ascii( c ), shft( shft ), ctrl( ctrl ), alt( alt ), os( os ) { };
+		type( KeyEventType::KET_PRINT ), event( KeyEventPrintable( { c, shft, ctrl, alt, os } ) ) { };
 	// Control
-	KeyEvent( ControlKeyEvent ck ) : type( KeyEventType::KET_CONTROL ), ck( ck ) { };
+	KeyEvent( KeyEventControl ck ) : type( KeyEventType::KET_CONTROL ), event( ck ) { };
 	// Resize
-	KeyEvent( size_t cols, size_t rows ) : type( KeyEventType::KET_RESIZE ), cols( cols ), rows( rows ) { };
+	KeyEvent( size_t cols, size_t rows ) : type( KeyEventType::KET_RESIZE ), event( KeyEventResize( { cols, rows } ) ) { };
 
 };
 

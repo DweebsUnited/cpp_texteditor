@@ -2,6 +2,7 @@
 
 #include <utility>
 #include <string>
+#include <variant>
 
 // The screen command class, documenting everything that we might tell the screen to do
 // These will be emitted by an Editor or Keyboard to update the screen
@@ -11,33 +12,32 @@ enum class ScreenCommandType {
 	SC_CLEAR,
 	SC_PUTSTRING,
 };
+
+struct ScreenCommandResize {
+	size_t cols;
+	size_t rows;
+};
+struct ScreenCommandPutStr {
+	std::string msg;
+	size_t x;
+	size_t y;
+	bool insert;
+};
+
 struct ScreenCommand {
 
 	ScreenCommandType type;
 
-	union {
-		struct {
-			size_t cols;
-			size_t rows;
-		} size;
-		struct {
-			std::string msg;
-			size_t x;
-			size_t y;
-		} message;
-	};
+	std::variant<ScreenCommandResize, ScreenCommandPutStr> cmd;
 
 	ScreenCommand( ) : type( ScreenCommandType::SC_NOP ) { };
 	ScreenCommand( ScreenCommandType & sc ) : type( sc ) { };
-	ScreenCommand( size_t cols, size_t rows ) : type( ScreenCommandType::SC_RESIZE ), size( { cols, rows } ) { }
-	ScreenCommand( std::string && msg, size_t x, size_t y ) : type( ScreenCommandType::SC_PUTSTRING ), message( { std::move( msg ), x, y } ) { };
-
-	// In a discriminated union, you are responsible for deletion of class-types
-	~ScreenCommand( ) {
-		if( type == ScreenCommandType::SC_PUTSTRING ) {
-			this->message.msg.~basic_string<char>( );
-		}
-	};
+	ScreenCommand( size_t cols, size_t rows ) :
+		type( ScreenCommandType::SC_RESIZE ),
+		cmd( ScreenCommandResize( { cols, rows } ) ) { }
+	ScreenCommand( std::string && msg, size_t x, size_t y, bool insert = true ) :
+		type( ScreenCommandType::SC_PUTSTRING ),
+		cmd( ScreenCommandPutStr( { std::move( msg ), x, y, insert } ) ) { };
 
 };
 
@@ -58,7 +58,7 @@ protected:
 	// Set the size, realloc any buffers if needed
 	virtual bool doSetSize( size_t cols, size_t rows ) = 0;
 	// Put a string
-	virtual size_t doPutString( std::string & str, size_t x, size_t y ) = 0;
+	virtual size_t doPutString( std::string & str, size_t x, size_t y, bool insert = true ) = 0;
 
 public:
 	// Public non-virtual init function
@@ -68,13 +68,23 @@ public:
 	// Define this in the base, not the derived
 	bool consumeCommand( ScreenCommand & sc ) {
 		switch( sc.type ) {
+		case ScreenCommandType::SC_NOP:
+			return true;
 		case ScreenCommandType::SC_RESIZE:
-			return this->setSize( sc.size.cols, sc.size.rows );
+		{
+			ScreenCommandResize & size = std::get<ScreenCommandResize>( sc.cmd );
+			return this->setSize( size.cols, size.rows );
+		}
 		case ScreenCommandType::SC_CLEAR:
 			return this->clear( );
 		case ScreenCommandType::SC_PUTSTRING:
-			return this->putString( sc.message.msg, sc.message.x, sc.message.y ) == sc.message.msg.length( );
+		{
+			ScreenCommandPutStr & message = std::get<ScreenCommandPutStr>( sc.cmd );
+			return this->putString( message.msg, message.x, message.y, message.insert ) == message.msg.length( );
 		}
+		}
+
+		return false;
 	};
 
 	bool clear( ) { return this->doClear( ); }
@@ -85,6 +95,6 @@ public:
 	bool setSize( size_t cols, size_t rows ) { this->rows = rows; this->cols = cols; return this->doSetSize( cols, rows ); };
 
 	// Put a string on screen -- Trim if end of line reached
-	size_t putString( std::string & str, size_t x, size_t y ) { return this->doPutString( str, x, y ); }
+	size_t putString( std::string & str, size_t x, size_t y, bool insert = true ) { return this->doPutString( str, x, y, insert ); }
 
 };

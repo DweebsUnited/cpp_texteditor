@@ -6,6 +6,7 @@
 // No overflow, no wraparound, etc
 class LineEditor : public Editor {
 protected:
-
+	
+	std::vector<ScreenCommand> doConsumeKey( KeyEvent & key ) { return std::vector<ScreenCommand>( ); };
 
 };

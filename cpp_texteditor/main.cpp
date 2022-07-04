@@ -71,7 +71,8 @@ void input_worker(
 
 			// If KeyEvent is a Ctrl-Q, emit quit and tell global state to stop
 			if( c.type == KeyEventType::KET_PRINT ) {
-				if( c.ascii == 'q' && c.shft == false && c.ctrl == true && c.alt == false ) {
+				KeyEventPrintable & prnt = std::get<KeyEventPrintable>( c.event );
+				if( prnt.ascii == 'q' && prnt.shft == false && prnt.ctrl == true && prnt.alt == false ) {
 					// Quit!
 					state->stop( );
 					return;
@@ -107,7 +108,7 @@ void screen_worker(
 		while( ch->size( ) > 0 ) {
 
 			std::unique_ptr<ScreenCommand> c = ch->pop( );
-			screen->consumeCommand( c );
+			screen->consumeCommand( *c );
 
 		}
 
@@ -139,13 +140,15 @@ void editor_worker(
 
 			std::unique_ptr<KeyEvent> c = ch_in->pop( );
 			if( c->type == KeyEventType::KET_PRINT ) {
-				
+
+				KeyEventPrintable & prnt = std::get<KeyEventPrintable>( c->event );
+
 				ch_out->push( ScreenCommand( std::format(
 					"{}{}{}",
-					c->ctrl ? 'C' : ' ',
-					c->alt ? 'A' : ' ',
-					c->ascii ),
-					0, 0 ) );
+					prnt.ctrl ? 'C' : ' ',
+					prnt.alt ? 'A' : ' ',
+					prnt.ascii ),
+					0, 0, false ) );
 
 			}
 
@@ -173,7 +176,7 @@ int main( ) {
 	}
 
 	// Start with a line buffer-backed emacs
-	std::shared_ptr<Emacs<LineEditor>> editor = std::make_shared<Emacs<LineEditor>( );
+	std::shared_ptr<Emacs<LineEditor>> editor = std::make_shared<Emacs<LineEditor>>( );
 
 
 	// Make a state and a few channels
@@ -184,7 +187,7 @@ int main( ) {
 
 	// Start up some worker threads
 	std::thread input_thread( input_worker, console, ch_keybrd, state );
-	std::thread editor_thread( editor_worker,  )
+	std::thread editor_thread( editor_worker, editor, ch_keybrd, ch_screen, state );
 	std::thread screen_thread( screen_worker, console, ch_screen, state );
 
 	input_thread.join( );

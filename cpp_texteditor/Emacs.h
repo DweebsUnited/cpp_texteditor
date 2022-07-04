@@ -8,6 +8,7 @@
 template<typename E>
 class Emacs : public E {
 protected:
-
+	
+	std::vector<ScreenCommand> doConsumeKey( KeyEvent & key ) { return E::doConsumeKey( key ); };
 
 };
